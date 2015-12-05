@@ -1,3 +1,5 @@
+![Codeship](https://codeship.com/projects/a91afb80-7d76-0133-4418-6a5cc34fb59d/status?branch=master)
+
 # Spambox
 A simple gem that uses formbox.es to give a spam score (0-100) based on spammy keywords for any Array, Hash, ActiveRecord- or String object.
 
