@@ -1,45 +1,58 @@
 require "json"
-require 'open-uri'
+require "open-uri"
+require "sanitize"
 
 class Spambox
-  attr_accessor :object
-  attr_reader :blacklist
-
   FORMBOX_BLACKLIST_URL = "https://formbox.es/spam-keywords.json"
 
-  def initialize(object)
+  def initialize(object, options = { allow_html: false })
     @object = object
-    @occurences = 0
-    @total_words = 0
-    @blacklist = blacklist
-
-    process(object)
+    @options = options
   end
 
   def spam_score
-    (@occurences.to_f / @total_words.to_f * 100).round
+    return 100 if @options[:allow_html] == false && contains_html?
+    return 0 if (string_length = sanitized_string.split.size.to_f) == 0
+    (count_occurences.to_f / string_length * 100).round
+  end
+
+  def update_blacklist
+    request = open(FORMBOX_BLACKLIST_URL)
+
+    Dir.mkdir("tmp") unless Dir.exists?("tmp")
+    File.open("tmp/spam_triggers.json", 'w') { |f| f.write(request.read) }
   end
 
   private
 
-  def process(object)
-    if object.is_a? String
-      @occurences = check(object)
-      @total_words = object.split.size
-    elsif object.is_a? ActiveRecord::Base
-      object.class.column_names.each do |column_name|
-        attribute = object.send(column_name).to_s
-        @occurences += check(attribute)
-        @total_words += attribute.split.size
-      end
+  def sanitized_string
+    Sanitize.fragment(flat_string)
+  end
+
+  def flat_string
+    case @object
+    when String
+      return @object
+    when Array
+      return @object.join(" ")
+    when Hash
+      return flatten_hash(h).values.join(" ")
+    when ActiveRecord::Base
+      return @object.class.column_names.map do |column|
+        @object.send(column).to_s
+      end.join(" ")
     else
-      raise ArgumentError, "SpamFilter only supports String- or ActiveRecord objects, got #{object.class}."
+      raise ArgumentError, "SpamFilter only supports Array-, String- or ActiveRecord objects, got #{@object.class}."
     end
   end
 
-  def check(attribute)
-    @blacklist.map { |s|
-      attribute.to_s.downcase.scan(s.downcase).count * s.split.size
+  def contains_html?
+    return true if sanitized_string != flat_string
+  end
+
+  def count_occurences
+    blacklist.map { |s|
+      sanitized_string.downcase.scan(s.downcase).count * s.split.size
     }.inject(0, :+)
   end
 
@@ -57,10 +70,8 @@ class Spambox
     "{}"
   end
 
-  def update_blacklist
-    request = open(FORMBOX_BLACKLIST_URL)
-
-    Dir.mkdir("tmp") unless Dir.exists?("tmp")
-    File.open("tmp/spam_triggers.json", 'w') { |f| f.write(request.read) }
+  def flatten_hash(h)
+    return { [] => h } unless h.is_a?(Hash)
+    Hash[h.map { |a,v1| flatten_hash(v1).map { |b,v2| [[a] + b, v2] } }.flatten(1)]
   end
 end
