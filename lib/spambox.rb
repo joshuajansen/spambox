@@ -19,8 +19,8 @@ class Spambox
   def update_blacklist
     request = open(FORMBOX_BLACKLIST_URL)
 
-    Dir.mkdir("tmp") unless Dir.exists?("tmp")
-    File.open("tmp/spam_triggers.json", 'w') { |f| f.write(request.read) }
+    Dir.mkdir("tmp") unless Dir.exist?("tmp")
+    File.open("tmp/spam_triggers.json", "w") { |f| f.write(request.read) }
   end
 
   private
@@ -30,19 +30,24 @@ class Spambox
   end
 
   def flat_string
+    @flat_string ||= squish(object_to_string)
+  end
+
+  def object_to_string
     case @object
     when String
       return @object
     when Array
       return @object.join(" ")
     when Hash
-      return flatten_hash(h).values.join(" ")
+      return flatten_hash_values(h).values.join(" ")
     when ActiveRecord::Base
       return @object.class.column_names.map do |column|
         @object.send(column).to_s
       end.join(" ")
     else
-      raise ArgumentError, "SpamFilter only supports Array-, String- or ActiveRecord objects, got #{@object.class}."
+      fail ArgumentError, "SpamFilter only supports Array-,
+        String- or ActiveRecord objects, got #{@object.class}."
     end
   end
 
@@ -51,9 +56,9 @@ class Spambox
   end
 
   def count_occurences
-    blacklist.map { |s|
+    blacklist.map do |s|
       sanitized_string.downcase.scan(s.downcase).count * s.split.size
-    }.inject(0, :+)
+    end.inject(0, :+)
   end
 
   def blacklist
@@ -63,15 +68,19 @@ class Spambox
   def spam_triggers
     tmp_filename = "tmp/spam_triggers.json"
 
-    update_blacklist unless File.exists?(tmp_filename) && File.mtime(tmp_filename) > Time.now - (60 * 24 * 7)
+    update_blacklist unless File.exist?(tmp_filename) && File.mtime(tmp_filename) > Time.now - (60 * 24 * 7)
 
     File.read(tmp_filename)
   rescue OpenURI::HTTPError, Errno::ECONNREFUSED
     "{}"
   end
 
-  def flatten_hash(h)
-    return { [] => h } unless h.is_a?(Hash)
-    Hash[h.map { |a,v1| flatten_hash(v1).map { |b,v2| [[a] + b, v2] } }.flatten(1)]
+  def flatten_hash_values(hash)
+    return hash if hash.is_a? String
+    hash.flat_map { |_, v| [*flatten_hash_values(v)] }
+  end
+
+  def squish(string)
+    string.gsub(/[[:space:]]+/, ' ').strip
   end
 end

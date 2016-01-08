@@ -7,7 +7,7 @@ A simple gem that uses formbox.es to give a spam score (0-100) based on spammy k
 
 Add this line to your application's Gemfile:
 
-    gem "spambox", "~> 0.2"
+    gem "spambox", "~> 0.3"
 
 And then execute:
 

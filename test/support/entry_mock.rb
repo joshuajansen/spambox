@@ -10,6 +10,6 @@ class EntryMock < ActiveRecord::Base
   end
 
   def self.column_names
-    ["name", "body"]
+    %w(name body)
   end
 end

@@ -1,0 +1,32 @@
+Style/DotPosition:
+  EnforcedStyle: trailing
+Style/IndentationWidth:
+  Width: 2
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+  SupportedStyles:
+    - single_quotes
+    - double_quotes
+Style/TrailingBlankLines:
+  EnforcedStyle: final_newline
+  SupportedStyles:
+    - final_newline
+    - final_blank_line
+Metrics/LineLength:
+  Max: 110
+  AllowURI: true
+  URISchemes:
+    - http
+    - https
+Metrics/MethodLength:
+  CountComments: false
+  Max: 40
+Metrics/AbcSize:
+  Max: 25
+Style/Documentation:
+  Description: Document classes and non-namespace modules.
+  Enabled: false
+Style/ClassAndModuleChildren:
+  Enabled: false
+Style/IfUnlessModifier:
+  Enabled: true
