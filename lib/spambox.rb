@@ -1,10 +1,7 @@
 require "json"
-require "open-uri"
 require "sanitize"
 
 class Spambox
-  FORMBOX_BLACKLIST_URL = "https://formbox.es/spam-keywords.json"
-
   def initialize(object, options = { allow_html: false })
     @object = object
     @options = options
@@ -14,13 +11,6 @@ class Spambox
     return 100 if @options[:allow_html] == false && contains_html?
     return 0 if (string_length = sanitized_string.split.size.to_f) == 0
     (count_occurences.to_f / string_length * 100).round
-  end
-
-  def update_blacklist
-    request = open(FORMBOX_BLACKLIST_URL)
-
-    Dir.mkdir("tmp") unless Dir.exist?("tmp")
-    File.open("tmp/spam_triggers.json", "w") { |f| f.write(request.read) }
   end
 
   private
@@ -62,17 +52,9 @@ class Spambox
   end
 
   def blacklist
-    JSON.parse(spam_triggers)
-  end
-
-  def spam_triggers
-    tmp_filename = "tmp/spam_triggers.json"
-
-    update_blacklist unless File.exist?(tmp_filename) && File.mtime(tmp_filename) > Time.now - (60 * 24 * 7)
-
-    File.read(tmp_filename)
-  rescue OpenURI::HTTPError, Errno::ECONNREFUSED
-    "{}"
+    path = File.expand_path(File.dirname(__FILE__))
+    file = File.read("#{path}/spam-keywords.json")
+    JSON.parse(file)
   end
 
   def flatten_hash_values(hash)
